@@ -18,7 +18,7 @@ public class FirstPersonController : MonoBehaviour
     float verticalLookRotation;
     Vector3 moveAmount;
     Vector3 smoothMoveVelocity;
-    CapsuleCollider collider;
+    new CapsuleCollider collider;
     float groundedRayDistance;
 
     bool isGrounded;
