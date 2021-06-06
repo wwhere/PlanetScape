@@ -7,28 +7,56 @@ public class ColourGenerator
     ColourSettings settings;
     Texture2D texture;
     const int textureResolution = 50;
+    INoiseFilter biomeNoiseFilter;
 
     public void UpdateSettings(ColourSettings settings)
     {
         this.settings = settings;
-        if (texture == null)
+        if (texture == null || texture.height != settings.biomeColourSettings.biomes.Length)
         {
-            texture = new Texture2D(textureResolution, 1);
+            texture = new Texture2D(textureResolution, settings.biomeColourSettings.biomes.Length, TextureFormat.RGBA32, false);
+
         }
+        biomeNoiseFilter = NoiseFilterFactory.CreateNoiseFilter(settings.biomeColourSettings.noise);
     }
 
     public void UpdateElevation(MinMax elevationMinMax)
     {
         settings.planetMaterial.SetVector("_elevationMinMax", new Vector4(elevationMinMax.Min, elevationMinMax.Max));
     }
+    public float BiomePercentFromPoint(Vector3 pointOnUnitSphere)
+    {
+        float heightPercent = (pointOnUnitSphere.y + 1) / 2f;
+        heightPercent += (biomeNoiseFilter.Evaluate(pointOnUnitSphere) - settings.biomeColourSettings.noiseOffset) * settings.biomeColourSettings.noiseStrength;
+        float biomeIndex = 0;
+        int numberBiomes = settings.biomeColourSettings.biomes.Length;
+        float blendRange = settings.biomeColourSettings.blendAmount / 2 + 0.001f;
+
+        for (int i = 0; i < numberBiomes; i++)
+        {
+            float distance = heightPercent - settings.biomeColourSettings.biomes[i].startHeight;
+            float weight = Mathf.InverseLerp(-blendRange, blendRange, distance);
+            biomeIndex *= 1 - weight; 
+            biomeIndex += i * weight;
+        }
+
+        return biomeIndex / Mathf.Max(1,(numberBiomes - 1));
+    }
 
     public void UpdateColours()
     {
-        Color[] colours = new Color[textureResolution];
-        for (int i = 0; i < textureResolution; i++)
+        Color[] colours = new Color[texture.width * texture.height];
+        int colourIndex = 0;
+        foreach (var biome in settings.biomeColourSettings.biomes)
         {
-            colours[i] = settings.gradient.Evaluate(i / (textureResolution - 1f));
-        }
+            for (int i = 0; i < textureResolution; i++)
+            {
+                Color gradientClour = biome.gradient.Evaluate(i / (textureResolution - 1f));
+                Color tintColour = biome.tint;
+                colours[colourIndex] = gradientClour * (1 - biome.tintPercent) + tintColour * biome.tintPercent;
+                colourIndex++;
+            }
+        }        
 
         texture.SetPixels(colours);
         texture.Apply();
