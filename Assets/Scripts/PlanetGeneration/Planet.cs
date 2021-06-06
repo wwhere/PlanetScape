@@ -33,7 +33,7 @@ public class Planet : MonoBehaviour
             if (meshFilters[i] == null)
             {
                 GameObject meshObj = new GameObject("mesh");
-                meshObj.transform.SetParent(transform);
+                meshObj.transform.parent = transform;
 
                 meshObj.AddComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("Standard"));
                 meshFilters[i] = meshObj.AddComponent<MeshFilter>();
